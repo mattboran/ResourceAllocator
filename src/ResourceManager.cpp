@@ -2,14 +2,16 @@
 
 // Constructor and Destructor for ResourceManager
 
-ResourceManager::ResourceManager(int num_resources, int tasks, int* resources_initial)
+ResourceManager::ResourceManager(int n_resources, int tasks, int* resources_initial)
 {
 	num_tasks = tasks;
-	total_resources = new int[num_resources];
-	resources_available = new int[num_resources];
-	resources_claimed = new int[num_resources];
+	num_resources = n_resources;
+	cycle = 0;
+	total_resources = new int[n_resources];
+	resources_available = new int[n_resources];
+	resources_claimed = new int[n_resources];
 
-	for (int i = 0; i < num_resources; i++)
+	for (int i = 0; i < n_resources; i++)
 	{
 		total_resources[i] = resources_initial[i];
 		resources_available[i] = resources_initial[i];
@@ -24,3 +26,12 @@ ResourceManager::~ResourceManager()
 	delete resources_claimed;
 }
 
+void ResourceManager::incrementCycle()
+{
+	cycle++;
+}
+
+int ResourceManager::getCycle()
+{
+	return cycle;
+}

@@ -1,11 +1,14 @@
 #include "data_types.h"
 #include <assert.h>
+
 // Constructor and Destructor for Task
 Task::Task(int n_resources, int i)
 {
 	id = i;
 	time_created = -1;
 	time_terminated = -1;
+	blocked = false;
+	time_blocked = 0;
 	resources_held = new int[n_resources];
 	resources_claimed = new int[n_resources];
 	num_resources = n_resources;
@@ -50,6 +53,27 @@ void Task::setTimeCreated(int i)
 {
 	time_created = i;
 }
+
+void Task::block()
+{
+	blocked = true;
+}
+
+void Task::unblock()
+{
+	blocked = false;
+}
+
+void Task::incrementTimeBlocked()
+{
+	time_blocked++;
+}
+
+int Task::getTimeBlocked()
+{
+	return time_blocked;
+}
+
 // Get methods
 int Task::getResourceHeld(int i)
 {

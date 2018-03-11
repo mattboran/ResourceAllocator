@@ -22,12 +22,13 @@ typedef enum action_type
 class Action
 {
 	action_t type;
-	int delay, resource_id, amount;
+	int task_id, delay, resource_id, amount;
 public:
-	Action(action_t typ, int d, int res_id, int amt);
+	Action(action_t typ, int t_id, int d, int res_id, int amt);
 	Action(const Action &action);
 
 	action_t getType() const;
+	int getTaskId() const;
 	int getStartTime() const;
 	int getResourceId() const;
 	int getAmount() const;
@@ -38,22 +39,27 @@ public:
 class Task {
 	int* resources_held;
 	int* resources_claimed;
-	int id, time_created, time_terminated, num_resources, delay;
+	int id, time_created, time_blocked, time_terminated, num_resources, delay;
+	bool blocked;
 	bool sanityCheck(int i);
 public:
-	Task(int num_resources, int i);
+	Task(int n_resources, int i);
 	~Task();
 	void setResourceHeld(int i, int amount);
 	void setResourceClaimed(int i, int amount);
 	void setDelay(int i);
 	void setTimeTerminated(int i);
 	void setTimeCreated(int i);
+	void block();
+	void incrementTimeBlocked();
+	void unblock();
 	int getResourceHeld(int i);
 	int getResourceClaim(int i);
 	int getId();
 	int getDelay();
 	int getTimeCreated();
 	int getTimeTerminated();
+	int getTimeBlocked();
 
 	void grantResources(int i, int amount);
 	void releaseResources(int i, int amount);
@@ -66,11 +72,13 @@ class ResourceManager {
 	int* total_resources;
 	int* resources_available;
 	int* resources_claimed;
-	int num_tasks;
+	int num_tasks, num_resources, cycle;
 
 public:
-	ResourceManager(int num_resources, int tasks, int* resources_initial);
+	ResourceManager(int n_resources, int tasks, int* resources_initial);
 	virtual ~ResourceManager();
+	void incrementCycle();
+	int getCycle();
 	virtual void dispatchInitiate(const Action &action, Task& task);
 	virtual void dispatchRequest(const Action &action, Task& task);
 	virtual void dispatchRelease(const Action &action, Task& task);
