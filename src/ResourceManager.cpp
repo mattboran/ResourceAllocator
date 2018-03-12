@@ -26,6 +26,15 @@ ResourceManager::~ResourceManager()
 	delete resources_claimed;
 }
 
+void ResourceManager::reset()
+{
+	for (int i = 0; i < num_resources; i++)
+	{
+		resources_available[i] = total_resources[i];
+		resources_claimed[i] = 0;
+	}
+}
+
 void ResourceManager::incrementCycle()
 {
 	cycle++;

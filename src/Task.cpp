@@ -102,7 +102,7 @@ int Task::getTimeCreated()
 	return time_created;
 }
 
-int Task::getTimeTerminated()
+int Task::getTimeTerminated() const
 {
 	return time_terminated;
 }
@@ -112,6 +112,7 @@ void Task::grantResources(int i, int amount)
 {
 	assert (sanityCheck(i));
 	resources_held[i] += amount;
+	unblock();
 }
 
 void Task::releaseResources(int i, int amount)

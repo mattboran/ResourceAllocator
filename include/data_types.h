@@ -58,7 +58,7 @@ public:
 	int getId();
 	int getDelay();
 	int getTimeCreated();
-	int getTimeTerminated();
+	int getTimeTerminated() const;
 	int getTimeBlocked();
 
 	void grantResources(int i, int amount);
@@ -74,15 +74,16 @@ class ResourceManager {
 	int* resources_claimed;
 	int num_tasks, num_resources, cycle;
 
-public:
-	ResourceManager(int n_resources, int tasks, int* resources_initial);
-	virtual ~ResourceManager();
-	void incrementCycle();
-	int getCycle();
 	virtual void dispatchInitiate(const Action &action, Task& task);
 	virtual void dispatchRequest(const Action &action, Task& task);
 	virtual void dispatchRelease(const Action &action, Task& task);
 	virtual void dispatchTerminate(const Action &action, Task& task);
+public:
+	ResourceManager(int n_resources, int tasks, int* resources_initial);
+	virtual ~ResourceManager();
+	void reset();
+	void incrementCycle();
+	int getCycle();
 	virtual void dispatchAction(const Action &action, Task& task);
 };
 
