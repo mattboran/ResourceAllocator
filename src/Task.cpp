@@ -8,6 +8,7 @@ Task::Task(int n_resources, int i)
 	time_created = -1;
 	time_terminated = -1;
 	blocked = false;
+	aborted = false;
 	time_blocked = 0;
 	resources_held = new int[n_resources];
 	resources_claimed = new int[n_resources];
@@ -17,13 +18,13 @@ Task::Task(int n_resources, int i)
 
 Task::~Task()
 {
-	delete resources_held;
-	delete resources_claimed;
+//	delete resources_held;
+//	delete resources_claimed;
 }
 
 // Sanity check for out of bounds array access
 bool Task::sanityCheck(int i) {
-	return (i > 0) && (i < num_resources);
+	return (i >= 0) && (i < num_resources);
 }
 
 // Set methods
@@ -64,15 +65,16 @@ void Task::unblock()
 	blocked = false;
 }
 
+void Task::abort()
+{
+	aborted = true;
+}
+
 void Task::incrementTimeBlocked()
 {
 	time_blocked++;
 }
 
-int Task::getTimeBlocked()
-{
-	return time_blocked;
-}
 
 // Get methods
 int Task::getResourceHeld(int i)
@@ -105,6 +107,21 @@ int Task::getTimeCreated()
 int Task::getTimeTerminated() const
 {
 	return time_terminated;
+}
+
+bool Task::isBlocked()
+{
+	return blocked;
+}
+
+bool Task::isAborted() const
+{
+	return aborted;
+}
+
+int Task::getTimeBlocked()
+{
+	return time_blocked;
 }
 
 // Additional setting for increment/decrement

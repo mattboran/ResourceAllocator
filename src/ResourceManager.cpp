@@ -1,4 +1,5 @@
 #include "data_types.h"
+#include <assert.h>
 
 // Constructor and Destructor for ResourceManager
 
@@ -19,13 +20,6 @@ ResourceManager::ResourceManager(int n_resources, int tasks, int* resources_init
 	}
 }
 
-ResourceManager::~ResourceManager()
-{
-	delete total_resources;
-	delete resources_available;
-	delete resources_claimed;
-}
-
 void ResourceManager::reset()
 {
 	for (int i = 0; i < num_resources; i++)
@@ -35,9 +29,32 @@ void ResourceManager::reset()
 	}
 }
 
+bool ResourceManager::sanityCheck(int i)
+{
+	return (i >= 0) && (i < num_resources);
+}
+
+void ResourceManager::incrementResourcesAvailable(int i, int amount)
+{
+	assert (sanityCheck(i));
+	resources_available[i] += amount;
+}
+
+void ResourceManager::decrementResourcesAvailable(int i, int amount)
+{
+	assert (sanityCheck(i));
+	resources_available[i] -= amount;
+}
+
 void ResourceManager::incrementCycle()
 {
 	cycle++;
+}
+
+int ResourceManager::getResourcesAvailable(int i)
+{
+	assert(sanityCheck(i));
+	return resources_available[i];
 }
 
 int ResourceManager::getCycle()

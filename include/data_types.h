@@ -8,6 +8,8 @@
 #ifndef INCLUDE_DATA_TYPES_H_
 #define INCLUDE_DATA_TYPES_H_
 
+#include <vector>
+
 typedef enum action_type
 {
 	INITIATE,
@@ -40,7 +42,7 @@ class Task {
 	int* resources_held;
 	int* resources_claimed;
 	int id, time_created, time_blocked, time_terminated, num_resources, delay;
-	bool blocked;
+	bool blocked, aborted;
 	bool sanityCheck(int i);
 public:
 	Task(int n_resources, int i);
@@ -53,12 +55,15 @@ public:
 	void block();
 	void incrementTimeBlocked();
 	void unblock();
+	void abort();
 	int getResourceHeld(int i);
 	int getResourceClaim(int i);
 	int getId();
 	int getDelay();
 	int getTimeCreated();
 	int getTimeTerminated() const;
+	bool isBlocked();
+	bool isAborted() const;
 	int getTimeBlocked();
 
 	void grantResources(int i, int amount);
@@ -74,17 +79,21 @@ class ResourceManager {
 	int* resources_claimed;
 	int num_tasks, num_resources, cycle;
 
-	virtual void dispatchInitiate(const Action &action, Task& task);
-	virtual void dispatchRequest(const Action &action, Task& task);
-	virtual void dispatchRelease(const Action &action, Task& task);
-	virtual void dispatchTerminate(const Action &action, Task& task);
+	virtual void dispatchInitiate(const Action &action, Task& task) = 0;
+	virtual void dispatchRequest(const Action &action, Task& task) = 0;
+	virtual void dispatchRelease(const Action &action, Task& task) = 0;
+	virtual void dispatchTerminate(const Action &action, Task& task) = 0;
 public:
 	ResourceManager(int n_resources, int tasks, int* resources_initial);
-	virtual ~ResourceManager();
+	~ResourceManager() = default;
+	bool sanityCheck(int i);
 	void reset();
 	void incrementCycle();
+	void incrementResourcesAvailable(int i, int amount);
+	void decrementResourcesAvailable(int i, int amount);
 	int getCycle();
-	virtual void dispatchAction(const Action &action, Task& task);
+	int getResourcesAvailable(int i);
+	virtual void dispatchAction(const Action &action, Task& task) = 0;
 };
 
 // OptimisticResourceManager dispatches actions on tasks.
@@ -97,14 +106,16 @@ class OptimisticResourceManager : public ResourceManager
 
 public:
 	OptimisticResourceManager(int num_resources, int tasks, int* resources_initial);
+	~OptimisticResourceManager();
 	void dispatchAction(const Action &action, Task& task);
+	void handleDeadlock(std::vector<Task> &tasklist);
 };
 
 // BankerResourceManager likewise dispatches actions on tasks.
-class BankerResourceManager : public ResourceManager
-{
-
-};
+//class BankerResourceManager : public ResourceManager
+//{
+//
+//};
 
 
 #endif /* INCLUDE_DATA_TYPES_H_ */

@@ -4,8 +4,6 @@
 #include <vector>
 #include "data_types.h"
 
-#define NULL 0
-
 using namespace std;
 
 typedef vector<Task> taskvec_t;
@@ -15,13 +13,13 @@ typedef vector<actionvec_t> ActionContainer_t;
 static action_t stringToActionType(const string &str);
 static bool areAllTasksFinished(const taskvec_t &tasklist);
 
-int main(int argc, char** argv[])
+int main(int argc, char** argv)
 {
 	// Set up input stream and open the file
 	string filename = "";
 	ifstream input_file;
 
-	if (argc == 0)
+	if (argc < 2)
 	{
 		filename = "./data/input-01.txt";
 	}
@@ -65,7 +63,6 @@ int main(int argc, char** argv[])
 	// Read in the actions
 	string action_type;
 	action_t type;
-	Action action;
 	int task_id = 0, delay = 0, resource_id = 0, amount = 0;
 	while(input_file >> action_type)
 	{
@@ -76,14 +73,37 @@ int main(int argc, char** argv[])
 		input_file >> amount;
 		task_id--;
 
-		action = Action(type, task_id, delay, resource_id - 1, amount);
+		Action action(type, task_id, delay, resource_id - 1, amount);
 		action_container[task_id].push_back(action);
 	}
 
 	input_file.close();
 
-	// Main loop for OptimisticResourceManager
 
+	// Main loop for OptimisticResourceManager
+	OptimisticResourceManager optimistic_manager =
+			OptimisticResourceManager(num_resources, num_tasks, resources_available);
+	int current_cycle = 0;
+	while (!areAllTasksFinished(task_list))
+	{
+		current_cycle = optimistic_manager.getCycle();
+		cout << "Cycle " << current_cycle << " - " << current_cycle + 1 << "\n";
+		// Process each task's action for this cycle
+		for (int i = 0; i < num_tasks; i++)
+		{
+			if (task_list[i].isAborted())
+			{
+				continue;
+			}
+
+			optimistic_manager.dispatchAction(action_container[i][0], task_list[i]);
+			if (!task_list[i].isBlocked())
+			{
+				action_container[i].erase(action_container[i].begin());
+			}
+		}
+		optimistic_manager.incrementCycle();
+	}
 
 	// Main loop for Banker
 
@@ -118,7 +138,7 @@ static bool areAllTasksFinished(const taskvec_t &tasklist)
 	bool retVal = true;
 	for (int i = 0; i < tasklist.size(); i++)
 	{
-		if (tasklist[i].getTimeTerminated() < 0)
+		if (tasklist[i].getTimeTerminated() < 0 && !tasklist[i].isAborted())
 		{
 			retVal = false;
 		}

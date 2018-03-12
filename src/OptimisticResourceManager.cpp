@@ -8,10 +8,16 @@
 #include <iostream>
 #include "data_types.h"
 
-OptimisticResourceManager::OptimisticResourceManager(int num_resources, int tasks, int* resources_initial)
-{
-	ResourceManager(num_resources, tasks, resources_initial);
-}
+OptimisticResourceManager::OptimisticResourceManager(int num_resources, int tasks, int* resources_initial) :
+	ResourceManager(num_resources, tasks, resources_initial) {}
+
+//
+//OptimisticResourceManager::~OptimisticResourceManager()
+//{
+//	delete total_resources;
+//	delete resources_available;
+//	delete resources_claimed;
+//}
 
 // Inspired by React-Redux's Action Creators and Actions - handle the action
 void OptimisticResourceManager::dispatchAction(const Action &action, Task& task)
@@ -37,8 +43,14 @@ void OptimisticResourceManager::dispatchInitiate(const Action &action, Task& tas
 {
 	assert (task.getId() == action.getTaskId());
 
+	int resource_id = action.getResourceId();
+
 	task.setTimeCreated(getCycle());
 	task.setResourceClaimed(action.getResourceId(), action.getAmount());
+	std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
+					" Task # " << task.getId() + 1 << " was initialized with claim "
+					<< action.getAmount() << " of resource " << resource_id + 1 <<
+					". It now holds " << task.getResourceClaim(resource_id) << " of that resource.\n";
 }
 
 void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task)
@@ -47,7 +59,7 @@ void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task
 	int requested_resource_id = action.getResourceId();
 	int amount_requested = action.getAmount();
 
-	if (resources_available[requested_resource_id] < amount_requested)
+	if (getResourcesAvailable(requested_resource_id) < amount_requested)
 	{
 		task.block();
 		std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
@@ -55,9 +67,8 @@ void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task
 	}
 	else
 	{
-		int held_resources = task.getResourceHeld(requested_resource_id);
 		task.grantResources(requested_resource_id, amount_requested);
-		resources_available[requested_resource_id] -= amount_requested;
+		decrementResourcesAvailable(requested_resource_id, amount_requested);
 		std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
 				" Task # " << task.getId() + 1 << " was granted " << amount_requested <<
 				" of resource " << requested_resource_id + 1 << ". It now holds " <<
@@ -73,7 +84,7 @@ void OptimisticResourceManager::dispatchRelease(const Action &action, Task& task
 	int amount_released = action.getAmount();
 
 	task.releaseResources(released_resource_id, amount_released);
-	resources_available[released_resource_id] += amount_released;
+	incrementResourcesAvailable(released_resource_id, amount_released);
 
 	std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
 			" Task # " << task.getId() + 1 << " is releasing " << amount_released <<
@@ -88,4 +99,12 @@ void OptimisticResourceManager::dispatchTerminate(const Action &action, Task& ta
 	assert (task.getTimeTerminated() < 0);
 
 	task.setTimeTerminated(getCycle());
+	std::cout << "At cycle " << getCycle() <<
+				" Task # " << task.getId() + 1 << " is terminated. \n";
+}
+
+void OptimisticResourceManager::handleDeadlock(std::vector<Task> &tasklist)
+{
+	// First check if there's deadlock
+
 }
