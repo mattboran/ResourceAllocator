@@ -31,7 +31,7 @@ public:
 
 	action_t getType() const;
 	int getTaskId() const;
-	int getStartTime() const;
+	int getDelay() const;
 	int getResourceId() const;
 	int getAmount() const;
 };
@@ -50,6 +50,7 @@ public:
 	void setResourceHeld(int i, int amount);
 	void setResourceClaimed(int i, int amount);
 	void setDelay(int i);
+	void incrementDelay();
 	void setTimeTerminated(int i);
 	void setTimeCreated(int i);
 	void block();
@@ -64,7 +65,7 @@ public:
 	int getTimeTerminated() const;
 	bool isBlocked();
 	bool isAborted() const;
-	int getTimeBlocked();
+	int getTimeBlocked() const;
 
 	void grantResources(int i, int amount);
 	void releaseResources(int i, int amount);
@@ -77,6 +78,7 @@ class ResourceManager {
 	int* total_resources;
 	int* resources_available;
 	int* resources_claimed;
+	int* cycle_resources_changed;
 	int num_tasks, num_resources, cycle;
 
 	virtual void dispatchInitiate(const Action &action, Task& task) = 0;
@@ -85,14 +87,16 @@ class ResourceManager {
 	virtual void dispatchTerminate(const Action &action, Task& task) = 0;
 public:
 	ResourceManager(int n_resources, int tasks, int* resources_initial);
-	~ResourceManager() = default;
+	virtual ~ResourceManager();
 	bool sanityCheck(int i);
 	void reset();
 	void incrementCycle();
 	void incrementResourcesAvailable(int i, int amount);
 	void decrementResourcesAvailable(int i, int amount);
+	void commitReleasedResources();
 	int getCycle();
 	int getResourcesAvailable(int i);
+	int getNumResources();
 	virtual void dispatchAction(const Action &action, Task& task) = 0;
 };
 
@@ -103,10 +107,10 @@ class OptimisticResourceManager : public ResourceManager
 	void dispatchRequest(const Action &action, Task& task);
 	void dispatchRelease(const Action &action, Task& task);
 	void dispatchTerminate(const Action &action, Task& task);
-
+	bool detectDeadlock(std::vector<Task> &tasklist);
 public:
 	OptimisticResourceManager(int num_resources, int tasks, int* resources_initial);
-	~OptimisticResourceManager();
+	~OptimisticResourceManager() = default;
 	void dispatchAction(const Action &action, Task& task);
 	void handleDeadlock(std::vector<Task> &tasklist);
 };

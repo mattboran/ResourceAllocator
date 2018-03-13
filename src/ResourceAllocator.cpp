@@ -12,6 +12,7 @@ typedef vector<actionvec_t> ActionContainer_t;
 
 static action_t stringToActionType(const string &str);
 static bool areAllTasksFinished(const taskvec_t &tasklist);
+static void printTaskStats(const taskvec_t &tasklist);
 
 int main(int argc, char** argv)
 {
@@ -97,13 +98,21 @@ int main(int argc, char** argv)
 			}
 
 			optimistic_manager.dispatchAction(action_container[i][0], task_list[i]);
-			if (!task_list[i].isBlocked())
+			if (task_list[i].isBlocked())
+			{
+				task_list[i].incrementTimeBlocked();
+			}
+			if (!task_list[i].isBlocked() && task_list[i].getDelay() == 0)
 			{
 				action_container[i].erase(action_container[i].begin());
 			}
 		}
+		optimistic_manager.handleDeadlock(task_list);
+		optimistic_manager.commitReleasedResources();
 		optimistic_manager.incrementCycle();
 	}
+	cout << "\n\tFIFO\n";
+	printTaskStats(task_list);
 
 	// Main loop for Banker
 
@@ -144,4 +153,24 @@ static bool areAllTasksFinished(const taskvec_t &tasklist)
 		}
 	}
 	return retVal;
+}
+
+static void printTaskStats(const taskvec_t &tasklist)
+{
+	int total_cycles = 0;
+	int task_cycles = 0;
+	int total_blocked = 0;
+	int blocked_cycles = 0;
+
+	for (int i = 0; i < tasklist.size(); i++)
+	{
+		task_cycles = tasklist[i].getTimeTerminated();
+		blocked_cycles = tasklist[i].getTimeBlocked();
+		int blocked_percent = (float)blocked_cycles/(float)task_cycles*100.f;
+		total_blocked += blocked_cycles;
+		total_cycles += task_cycles;
+		cout << "Task # " << i + 1
+				<< "\t" << task_cycles << "\t" << blocked_percent << "%\n";
+	}
+	cout << "Total \t\t" << total_cycles << "\t" << total_blocked << "%\n";
 }

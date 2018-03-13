@@ -45,6 +45,11 @@ void Task::setDelay(int i)
 	delay = i;
 }
 
+void Task::incrementDelay()
+{
+	delay++;
+}
+
 void Task::setTimeTerminated(int i)
 {
 	time_terminated = i;
@@ -119,7 +124,7 @@ bool Task::isAborted() const
 	return aborted;
 }
 
-int Task::getTimeBlocked()
+int Task::getTimeBlocked() const
 {
 	return time_blocked;
 }

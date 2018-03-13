@@ -31,7 +31,7 @@ int Action::getTaskId() const
 	return task_id;
 }
 
-int Action::getStartTime() const
+int Action::getDelay() const
 {
 	return delay;
 }
