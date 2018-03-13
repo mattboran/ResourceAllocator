@@ -43,8 +43,7 @@ void OptimisticResourceManager::dispatchInitiate(const Action &action, Task& tas
 	task.setResourceClaimed(action.getResourceId(), action.getAmount());
 	std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
 					" Task # " << task.getId() + 1 << " was initialized with claim "
-					<< action.getAmount() << " of resource " << resource_id + 1 <<
-					". It now claims " << task.getResourceClaim(resource_id) << " of that resource.\n";
+					<< action.getAmount() << " of resource " << resource_id + 1 << "\n";
 }
 
 void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task)
@@ -56,21 +55,20 @@ void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task
 	if (task.getDelay() < action.getDelay())
 	{
 		task.incrementDelay();
+		std::cout << "Task # " << task.getId() + 1 << " is working on its delay.\n";
 	}
 	else
 	{
 		if (getResourcesAvailable(requested_resource_id) < amount_requested)
 		{
 			task.block();
-			std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
-					" Task # " << task.getId() << " could not be granted its resource!\n";
+			std::cout << " Task # " << task.getId() + 1<< " could not be granted its resource!\n";
 		}
 		else
 		{
 			task.grantResources(requested_resource_id, amount_requested);
 			decrementResourcesAvailable(requested_resource_id, amount_requested);
-			std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
-					" Task # " << task.getId() + 1 << " was granted " << amount_requested <<
+			std::cout << " Task # " << task.getId() + 1 << " was granted " << amount_requested <<
 					" of resource " << requested_resource_id + 1 << ". It now holds " <<
 					task.getResourceHeld(requested_resource_id) << " of that resource.\n";
 		}
@@ -94,8 +92,7 @@ void OptimisticResourceManager::dispatchRelease(const Action &action, Task& task
 		task.releaseResources(released_resource_id, amount_released);
 		incrementResourcesAvailable(released_resource_id, amount_released);
 
-		std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
-				" Task # " << task.getId() + 1 << " is releasing " << amount_released <<
+		std::cout << " Task # " << task.getId() + 1 << " is releasing " << amount_released <<
 				" of resource " << released_resource_id + 1 << ". It now holds " <<
 				task.getResourceHeld(released_resource_id) << " of that resource.\n";
 	}
@@ -114,18 +111,19 @@ void OptimisticResourceManager::dispatchTerminate(const Action &action, Task& ta
 	{
 		task.setDelay(0);
 		task.setTimeTerminated(getCycle());
-		std::cout << "At cycle " << getCycle() <<
-					" Task # " << task.getId() + 1 << " is terminated. \n";
+		std::cout << " Task # " << task.getId() + 1 << " is terminated. \n";
 	}
 }
 
 // Checks for deadlock, and aborts the lowest process in the case that deadlock is found
-void OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
+bool OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
 {
+	bool retVal = false;
 	// First check if there's deadlock
 	int resource = 0;
 	if (detectDeadlock(tasklist))
 	{
+		retVal = true;
 		for (auto it = tasklist.begin(); it != tasklist.end(); it++)
 		{
 			if (!it->isAborted())
@@ -144,10 +142,12 @@ void OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
 					}
 				}
 				std::cout << ".\n";
+				it->abort();
 				break;
 			}
 		}
 	}
+	return retVal;
 }
 
 bool OptimisticResourceManager::detectDeadlock(vector<Task> &tasklist)

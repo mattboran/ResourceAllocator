@@ -112,7 +112,7 @@ public:
 	OptimisticResourceManager(int num_resources, int tasks, int* resources_initial);
 	~OptimisticResourceManager() = default;
 	void dispatchAction(const Action &action, Task& task);
-	void handleDeadlock(std::vector<Task> &tasklist);
+	bool handleDeadlock(std::vector<Task> &tasklist);
 };
 
 // BankerResourceManager likewise dispatches actions on tasks.

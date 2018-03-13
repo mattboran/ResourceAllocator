@@ -158,19 +158,27 @@ static bool areAllTasksFinished(const taskvec_t &tasklist)
 static void printTaskStats(const taskvec_t &tasklist)
 {
 	int total_cycles = 0;
-	int task_cycles = 0;
-	int total_blocked = 0;
-	int blocked_cycles = 0;
+	int total_blocked_percent = 0;
+	int total_blocked_cycles = 0;
 
 	for (int i = 0; i < tasklist.size(); i++)
 	{
-		task_cycles = tasklist[i].getTimeTerminated();
-		blocked_cycles = tasklist[i].getTimeBlocked();
+		if (tasklist[i].isAborted())
+		{
+			cout << "Task # " << i + 1 << "\taborted\n";
+			continue;
+		}
+		int task_cycles = tasklist[i].getTimeTerminated();
+		int blocked_cycles = tasklist[i].getTimeBlocked();
 		int blocked_percent = (float)blocked_cycles/(float)task_cycles*100.f;
-		total_blocked += blocked_cycles;
-		total_cycles += task_cycles;
+
 		cout << "Task # " << i + 1
-				<< "\t" << task_cycles << "\t" << blocked_percent << "%\n";
+				<< "\t" << task_cycles << "\t"
+				<< blocked_cycles << "\t" << blocked_percent << "%\n";
+
+		total_blocked_percent += blocked_percent;
+		total_blocked_cycles += blocked_cycles;
+		total_cycles += task_cycles;
 	}
-	cout << "Total \t\t" << total_cycles << "\t" << total_blocked << "%\n";
+	cout << "Total \t\t" << total_cycles << "\t" << total_blocked_cycles << "\t" << total_blocked_percent << "%\n";
 }
