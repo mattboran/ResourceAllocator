@@ -1,14 +1,11 @@
 #include <iostream>
 #include <fstream>
+#include <math.h>
 #include <string>
 #include <vector>
 #include "data_types.h"
 
 using namespace std;
-
-typedef vector<Task> taskvec_t;
-typedef vector<Action> actionvec_t;
-typedef vector<actionvec_t> ActionContainer_t;
 
 static action_t stringToActionType(const string &str);
 static bool areAllTasksFinished(const taskvec_t &tasklist);
@@ -22,7 +19,7 @@ int main(int argc, char** argv)
 
 	if (argc < 2)
 	{
-		filename = "./data/input-01.txt";
+		filename = "./data/input-05.txt";
 	}
 	else
 	{
@@ -85,29 +82,51 @@ int main(int argc, char** argv)
 	OptimisticResourceManager optimistic_manager =
 			OptimisticResourceManager(num_resources, num_tasks, resources_available);
 	int current_cycle = 0;
+	bool * blocked_processes = new bool[num_tasks];
+
 	while (!areAllTasksFinished(task_list))
 	{
 		current_cycle = optimistic_manager.getCycle();
 		cout << "Cycle " << current_cycle << " - " << current_cycle + 1 << "\n";
-		// Process each task's action for this cycle
+		// Process each task's action for this cycle. Start with blocked processes
 		for (int i = 0; i < num_tasks; i++)
 		{
-			if (task_list[i].isAborted())
+			if (task_list[i].isBlocked())
+			{
+				optimistic_manager.dispatchAction(action_container[i][0], task_list[i]);
+				blocked_processes[i] = true;
+				continue;
+			}
+			blocked_processes[i] = false;
+		}
+		for (int i = 0; i < num_tasks; i++)
+		{
+			if (task_list[i].getTimeTerminated() >= 0)
 			{
 				continue;
 			}
-
-			optimistic_manager.dispatchAction(action_container[i][0], task_list[i]);
+			if (!blocked_processes[i])
+			{
+				optimistic_manager.dispatchAction(action_container[i][0], task_list[i]);
+			}
 			if (task_list[i].isBlocked())
 			{
 				task_list[i].incrementTimeBlocked();
 			}
-			if (!task_list[i].isBlocked() && task_list[i].getDelay() == 0)
+			else if(task_list[i].getDelay() == 0)
 			{
 				action_container[i].erase(action_container[i].begin());
 			}
 		}
-		optimistic_manager.handleDeadlock(task_list);
+
+		// Loop in this cycle while no request can be satisfied
+		while (optimistic_manager.handleDeadlock(task_list))
+		{
+			if (optimistic_manager.canSatisfyAnyRequest(action_container, task_list))
+			{
+				break;
+			}
+		}
 		optimistic_manager.commitReleasedResources();
 		optimistic_manager.incrementCycle();
 	}
@@ -117,42 +136,43 @@ int main(int argc, char** argv)
 	// Main loop for Banker
 
 	// cleanup
+	delete blocked_processes;
 	delete resources_available;
 	return 0;
 }
 
 static action_t stringToActionType(const string &str){
-	action_t retVal;
+	action_t ret_val;
 	if (str.compare("initiate") == 0)
 	{
-		retVal = INITIATE;
+		ret_val = INITIATE;
 	}
 	else if (str.compare("request") == 0)
 	{
-		retVal = REQUEST;
+		ret_val = REQUEST;
 	}
 	else if (str.compare("release") == 0)
 	{
-		retVal = RELEASE;
+		ret_val = RELEASE;
 	}
 	else
 	{
-		retVal = TERMINATE;
+		ret_val = TERMINATE;
 	}
-	return retVal;
+	return ret_val;
 }
 
 static bool areAllTasksFinished(const taskvec_t &tasklist)
 {
-	bool retVal = true;
-	for (int i = 0; i < tasklist.size(); i++)
+	bool ret_val = true;
+	for (unsigned int i = 0; i < tasklist.size(); i++)
 	{
-		if (tasklist[i].getTimeTerminated() < 0 && !tasklist[i].isAborted())
+		if (tasklist[i].getTimeTerminated() < 0)
 		{
-			retVal = false;
+			ret_val = false;
 		}
 	}
-	return retVal;
+	return ret_val;
 }
 
 static void printTaskStats(const taskvec_t &tasklist)
@@ -161,7 +181,7 @@ static void printTaskStats(const taskvec_t &tasklist)
 	int total_blocked_percent = 0;
 	int total_blocked_cycles = 0;
 
-	for (int i = 0; i < tasklist.size(); i++)
+	for (unsigned int i = 0; i < tasklist.size(); i++)
 	{
 		if (tasklist[i].isAborted())
 		{
@@ -170,15 +190,15 @@ static void printTaskStats(const taskvec_t &tasklist)
 		}
 		int task_cycles = tasklist[i].getTimeTerminated();
 		int blocked_cycles = tasklist[i].getTimeBlocked();
-		int blocked_percent = (float)blocked_cycles/(float)task_cycles*100.f;
+		int blocked_percent = floor((float)blocked_cycles/(float)task_cycles*100.f + 0.5f);
 
 		cout << "Task # " << i + 1
 				<< "\t" << task_cycles << "\t"
 				<< blocked_cycles << "\t" << blocked_percent << "%\n";
 
-		total_blocked_percent += blocked_percent;
 		total_blocked_cycles += blocked_cycles;
 		total_cycles += task_cycles;
 	}
+	total_blocked_percent = floor((float)total_blocked_cycles/(float)total_cycles*100.f + 0.5f);
 	cout << "Total \t\t" << total_cycles << "\t" << total_blocked_cycles << "\t" << total_blocked_percent << "%\n";
 }

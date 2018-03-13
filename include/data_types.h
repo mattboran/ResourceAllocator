@@ -18,6 +18,8 @@ typedef enum action_type
 	TERMINATE
 } action_t;
 
+
+
 // This class represents one of the actions as listed above.
 // Actions are dispatched by the resource manager, and side effects
 // are applied to Tasks. Actions are immutable.
@@ -71,6 +73,10 @@ public:
 	void releaseResources(int i, int amount);
 };
 
+typedef std::vector<Task> taskvec_t;
+typedef std::vector<Action> actionvec_t;
+typedef std::vector<actionvec_t> ActionContainer_t;
+
 // The ResourceManager class is the parent class for Optimistic and Banker resource
 // managers. The class knows the total resources claimed, how many are available,
 // and the total number of tasks.
@@ -96,6 +102,7 @@ public:
 	void commitReleasedResources();
 	int getCycle();
 	int getResourcesAvailable(int i);
+	int getResourcesChanged(int i);
 	int getNumResources();
 	virtual void dispatchAction(const Action &action, Task& task) = 0;
 };
@@ -107,12 +114,13 @@ class OptimisticResourceManager : public ResourceManager
 	void dispatchRequest(const Action &action, Task& task);
 	void dispatchRelease(const Action &action, Task& task);
 	void dispatchTerminate(const Action &action, Task& task);
-	bool detectDeadlock(std::vector<Task> &tasklist);
+	bool detectDeadlock(taskvec_t &tasklist);
 public:
 	OptimisticResourceManager(int num_resources, int tasks, int* resources_initial);
 	~OptimisticResourceManager() = default;
 	void dispatchAction(const Action &action, Task& task);
-	bool handleDeadlock(std::vector<Task> &tasklist);
+	bool handleDeadlock(taskvec_t &tasklist);
+	bool canSatisfyAnyRequest(const ActionContainer_t &action_container, taskvec_t &tasklist);
 };
 
 // BankerResourceManager likewise dispatches actions on tasks.

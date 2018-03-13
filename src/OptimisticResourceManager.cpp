@@ -118,12 +118,12 @@ void OptimisticResourceManager::dispatchTerminate(const Action &action, Task& ta
 // Checks for deadlock, and aborts the lowest process in the case that deadlock is found
 bool OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
 {
-	bool retVal = false;
+	bool ret_val = false;
 	// First check if there's deadlock
 	int resource = 0;
 	if (detectDeadlock(tasklist))
 	{
-		retVal = true;
+		ret_val = true;
 		for (auto it = tasklist.begin(); it != tasklist.end(); it++)
 		{
 			if (!it->isAborted())
@@ -147,7 +147,7 @@ bool OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
 			}
 		}
 	}
-	return retVal;
+	return ret_val;
 }
 
 bool OptimisticResourceManager::detectDeadlock(vector<Task> &tasklist)
@@ -160,4 +160,35 @@ bool OptimisticResourceManager::detectDeadlock(vector<Task> &tasklist)
 		}
 	}
 	return true;
+}
+
+bool OptimisticResourceManager::canSatisfyAnyRequest(const ActionContainer_t &action_container, taskvec_t &tasklist)
+{
+	bool ret_val = false;
+
+	int* new_resources = new int[getNumResources()];
+	for (int i = 0; i < getNumResources(); i++)
+	{
+		new_resources[i] = getResourcesAvailable(i) + getResourcesChanged(i);
+	}
+
+	int current_request = 0;
+
+	for (unsigned int i = 0; i < tasklist.size(); i++)
+	{
+		if (tasklist[i].isAborted())
+		{
+			continue;
+		}
+		const Action current_action = action_container[i][0];
+		current_request = current_action.getAmount();
+		if (new_resources[current_action.getResourceId()] >= current_request)
+		{
+			ret_val = true;
+			break;
+		}
+	}
+
+	delete new_resources;
+	return ret_val;
 }
