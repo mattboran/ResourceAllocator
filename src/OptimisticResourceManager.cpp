@@ -14,8 +14,9 @@ OptimisticResourceManager::OptimisticResourceManager(int num_resources, int task
 	ResourceManager(num_resources, tasks, resources_initial) {}
 
 // For each cycle, for each task, dispatch the appropriate action
-void OptimisticResourceManager::dispatchAction(const Action &action, Task& task)
+void OptimisticResourceManager::dispatchAction(Task& task)
 {
+	const Action action = *task.getActionPointer();
 	switch(action.getType())
 	{
 	case(INITIATE):
@@ -62,6 +63,7 @@ void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task
 		if (getResourcesAvailable(requested_resource_id) < amount_requested)
 		{
 			task.block();
+			task.setBlockedSince(getCycle());
 			std::cout << " Task # " << task.getId() + 1<< " could not be granted its resource!\n";
 		}
 		else
@@ -162,7 +164,7 @@ bool OptimisticResourceManager::detectDeadlock(vector<Task> &tasklist)
 	return true;
 }
 
-bool OptimisticResourceManager::canSatisfyAnyRequest(const ActionContainer_t &action_container, taskvec_t &tasklist)
+bool OptimisticResourceManager::canSatisfyAnyRequest( taskvec_t &tasklist)
 {
 	bool ret_val = false;
 
@@ -180,7 +182,7 @@ bool OptimisticResourceManager::canSatisfyAnyRequest(const ActionContainer_t &ac
 		{
 			continue;
 		}
-		const Action current_action = action_container[i][0];
+		const Action current_action = *tasklist[i].getActionPointer();
 		current_request = current_action.getAmount();
 		if (new_resources[current_action.getResourceId()] >= current_request)
 		{

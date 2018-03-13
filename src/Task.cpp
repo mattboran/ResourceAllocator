@@ -10,14 +10,19 @@ Task::Task(int n_resources, int i)
 	blocked = false;
 	aborted = false;
 	time_blocked = 0;
+	// Hello memory leak
 	resources_held = new int[n_resources];
 	resources_claimed = new int[n_resources];
 	num_resources = n_resources;
 	delay = 0;
+	blocked_since = -1;
+	action_ptr = nullptr;
 }
 
+// TODO: fix memory leaks. shared_ptrs or proper C???
 Task::~Task()
 {
+
 //	delete resources_held;
 //	delete resources_claimed;
 }
@@ -60,6 +65,11 @@ void Task::setTimeCreated(int i)
 	time_created = i;
 }
 
+void Task::setBlockedSince(int i)
+{
+	blocked_since = i;
+}
+
 void Task::block()
 {
 	blocked = true;
@@ -67,6 +77,7 @@ void Task::block()
 
 void Task::unblock()
 {
+	blocked_since = -1;
 	blocked = false;
 }
 
@@ -80,6 +91,10 @@ void Task::incrementTimeBlocked()
 	time_blocked++;
 }
 
+void Task::bindActionPointer(Action &action)
+{
+	action_ptr = &action;
+}
 
 // Get methods
 int Task::getResourceHeld(int i)
@@ -127,6 +142,16 @@ bool Task::isAborted() const
 int Task::getTimeBlocked() const
 {
 	return time_blocked;
+}
+
+int Task::getBlockedSince() const
+{
+	return blocked_since;
+}
+
+Action* Task::getActionPointer()
+{
+	return action_ptr;
 }
 
 // Additional setting for increment/decrement

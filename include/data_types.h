@@ -43,8 +43,9 @@ public:
 class Task {
 	int* resources_held;
 	int* resources_claimed;
-	int id, time_created, time_blocked, time_terminated, num_resources, delay;
+	int id, time_created, time_blocked, time_terminated, num_resources, delay, blocked_since;
 	bool blocked, aborted;
+	Action* action_ptr;
 	bool sanityCheck(int i);
 public:
 	Task(int n_resources, int i);
@@ -55,10 +56,12 @@ public:
 	void incrementDelay();
 	void setTimeTerminated(int i);
 	void setTimeCreated(int i);
+	void setBlockedSince(int i);
 	void block();
 	void incrementTimeBlocked();
 	void unblock();
 	void abort();
+	void bindActionPointer(Action &action);
 	int getResourceHeld(int i);
 	int getResourceClaim(int i);
 	int getId();
@@ -68,6 +71,8 @@ public:
 	bool isBlocked();
 	bool isAborted() const;
 	int getTimeBlocked() const;
+	int getBlockedSince() const;
+	Action* getActionPointer();
 
 	void grantResources(int i, int amount);
 	void releaseResources(int i, int amount);
@@ -104,7 +109,7 @@ public:
 	int getResourcesAvailable(int i);
 	int getResourcesChanged(int i);
 	int getNumResources();
-	virtual void dispatchAction(const Action &action, Task& task) = 0;
+	virtual void dispatchAction(Task& task) = 0;
 };
 
 // OptimisticResourceManager dispatches actions on tasks.
@@ -118,9 +123,9 @@ class OptimisticResourceManager : public ResourceManager
 public:
 	OptimisticResourceManager(int num_resources, int tasks, int* resources_initial);
 	~OptimisticResourceManager() = default;
-	void dispatchAction(const Action &action, Task& task);
+	void dispatchAction(Task& task);
 	bool handleDeadlock(taskvec_t &tasklist);
-	bool canSatisfyAnyRequest(const ActionContainer_t &action_container, taskvec_t &tasklist);
+	bool canSatisfyAnyRequest(taskvec_t &tasklist);
 };
 
 // BankerResourceManager likewise dispatches actions on tasks.

@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
 	if (argc < 2)
 	{
-		filename = "./data/input-05.txt";
+		filename = "./data/input-06.txt";
 	}
 	else
 	{
@@ -77,13 +77,18 @@ int main(int argc, char** argv)
 
 	input_file.close();
 
+	// Bind action pointers
+	for (int i = 0; i < num_tasks; i++)
+	{
+		task_list[i].bindActionPointer(action_container[i][0]);
+	}
+
 
 	// Main loop for OptimisticResourceManager
 	OptimisticResourceManager optimistic_manager =
 			OptimisticResourceManager(num_resources, num_tasks, resources_available);
 	int current_cycle = 0;
 	bool * blocked_processes = new bool[num_tasks];
-
 	while (!areAllTasksFinished(task_list))
 	{
 		current_cycle = optimistic_manager.getCycle();
@@ -91,38 +96,30 @@ int main(int argc, char** argv)
 		// Process each task's action for this cycle. Start with blocked processes
 		for (int i = 0; i < num_tasks; i++)
 		{
-			if (task_list[i].isBlocked())
-			{
-				optimistic_manager.dispatchAction(action_container[i][0], task_list[i]);
-				blocked_processes[i] = true;
-				continue;
-			}
-			blocked_processes[i] = false;
-		}
-		for (int i = 0; i < num_tasks; i++)
-		{
-			if (task_list[i].getTimeTerminated() >= 0)
+			Task* current_task = &task_list[i];
+			if (current_task->getTimeTerminated() >= 0)
 			{
 				continue;
 			}
-			if (!blocked_processes[i])
+
+
+			optimistic_manager.dispatchAction(*current_task);
+
+			if (current_task->isBlocked())
 			{
-				optimistic_manager.dispatchAction(action_container[i][0], task_list[i]);
+				current_task->incrementTimeBlocked();
 			}
-			if (task_list[i].isBlocked())
-			{
-				task_list[i].incrementTimeBlocked();
-			}
-			else if(task_list[i].getDelay() == 0)
+			else if(current_task->getDelay() == 0)
 			{
 				action_container[i].erase(action_container[i].begin());
+				current_task->bindActionPointer(action_container[current_task->getId()][0]);
 			}
 		}
 
 		// Loop in this cycle while no request can be satisfied
 		while (optimistic_manager.handleDeadlock(task_list))
 		{
-			if (optimistic_manager.canSatisfyAnyRequest(action_container, task_list))
+			if (optimistic_manager.canSatisfyAnyRequest(task_list))
 			{
 				break;
 			}
