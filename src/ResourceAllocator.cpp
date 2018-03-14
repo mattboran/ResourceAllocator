@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <math.h>
@@ -10,6 +11,8 @@ using namespace std;
 static action_t stringToActionType(const string &str);
 static bool areAllTasksFinished(const taskvec_t &tasklist);
 static void printTaskStats(const taskvec_t &tasklist);
+static bool compareTasksForSort( const Task &a, const Task &b);
+
 
 int main(int argc, char** argv)
 {
@@ -19,7 +22,7 @@ int main(int argc, char** argv)
 
 	if (argc < 2)
 	{
-		filename = "./data/input-06.txt";
+		filename = "./data/input-12.txt";
 	}
 	else
 	{
@@ -87,46 +90,51 @@ int main(int argc, char** argv)
 	// Main loop for OptimisticResourceManager
 	OptimisticResourceManager optimistic_manager =
 			OptimisticResourceManager(num_resources, num_tasks, resources_available);
+
 	int current_cycle = 0;
 	bool * blocked_processes = new bool[num_tasks];
+
 	while (!areAllTasksFinished(task_list))
 	{
 		current_cycle = optimistic_manager.getCycle();
 		cout << "Cycle " << current_cycle << " - " << current_cycle + 1 << "\n";
+
 		// Process each task's action for this cycle. Start with blocked processes
+
+		stable_sort(task_list.begin(), task_list.end(), compareTasksForSort);
+
 		for (int i = 0; i < num_tasks; i++)
 		{
 			Task* current_task = &task_list[i];
-			if (current_task->getTimeTerminated() >= 0)
-			{
-				continue;
-			}
+			int task_id = current_task->getId();
 
+			if (current_task->isDoneOrAborted())
+				continue;
 
 			optimistic_manager.dispatchAction(*current_task);
-
 			if (current_task->isBlocked())
 			{
 				current_task->incrementTimeBlocked();
 			}
 			else if(current_task->getDelay() == 0)
 			{
-				action_container[i].erase(action_container[i].begin());
-				current_task->bindActionPointer(action_container[current_task->getId()][0]);
+				action_container[task_id].erase(action_container[task_id].begin());
+				current_task->bindActionPointer(action_container[task_id][0]);
 			}
 		}
 
+
 		// Loop in this cycle while no request can be satisfied
-		while (optimistic_manager.handleDeadlock(task_list))
+		while (optimistic_manager.handleDeadlock(task_list)
+				&& !areAllTasksFinished(task_list))
 		{
 			if (optimistic_manager.canSatisfyAnyRequest(task_list))
-			{
 				break;
-			}
 		}
 		optimistic_manager.commitReleasedResources();
 		optimistic_manager.incrementCycle();
 	}
+	stable_sort(task_list.begin(), task_list.end(), compareTasksForSort);
 	cout << "\n\tFIFO\n";
 	printTaskStats(task_list);
 
@@ -164,7 +172,7 @@ static bool areAllTasksFinished(const taskvec_t &tasklist)
 	bool ret_val = true;
 	for (unsigned int i = 0; i < tasklist.size(); i++)
 	{
-		if (tasklist[i].getTimeTerminated() < 0)
+		if (!tasklist[i].isDoneOrAborted())
 		{
 			ret_val = false;
 		}
@@ -199,3 +207,25 @@ static void printTaskStats(const taskvec_t &tasklist)
 	total_blocked_percent = floor((float)total_blocked_cycles/(float)total_cycles*100.f + 0.5f);
 	cout << "Total \t\t" << total_cycles << "\t" << total_blocked_cycles << "\t" << total_blocked_percent << "%\n";
 }
+
+static bool compareTasksForSort(const Task &a, const Task &b)
+{
+	if (a.isBlocked() && !b.isBlocked() )
+	{
+		return true;
+	}
+	if (!a.isBlocked() && b.isBlocked())
+	{
+		return false;
+	}
+	if (a.isBlocked() && b.isBlocked())
+	{
+		if (a.getBlockedSince() == b.getBlockedSince())
+		{
+			return a.getId() < b.getId();
+		}
+		return a.getBlockedSince() < b.getBlockedSince();
+	}
+	return a.getId() < b.getId();
+}
+

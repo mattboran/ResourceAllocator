@@ -28,7 +28,7 @@ Task::~Task()
 }
 
 // Sanity check for out of bounds array access
-bool Task::sanityCheck(int i) {
+bool Task::sanityCheck(int i) const {
 	return (i >= 0) && (i < num_resources);
 }
 
@@ -97,29 +97,29 @@ void Task::bindActionPointer(Action &action)
 }
 
 // Get methods
-int Task::getResourceHeld(int i)
+int Task::getResourceHeld(int i) const
 {
 	assert (sanityCheck(i));
 	return resources_held[i];
 }
 
-int Task::getResourceClaim(int i)
+int Task::getResourceClaim(int i) const
 {
 	assert (sanityCheck(i));
 	return resources_claimed[i];
 }
 
-int Task::getId()
+int Task::getId() const
 {
 	return id;
 }
 
-int Task::getDelay()
+int Task::getDelay() const
 {
 	return delay;
 }
 
-int Task::getTimeCreated()
+int Task::getTimeCreated() const
 {
 	return time_created;
 }
@@ -129,7 +129,7 @@ int Task::getTimeTerminated() const
 	return time_terminated;
 }
 
-bool Task::isBlocked()
+bool Task::isBlocked() const
 {
 	return blocked;
 }
@@ -139,6 +139,10 @@ bool Task::isAborted() const
 	return aborted;
 }
 
+bool Task::isDoneOrAborted() const
+{
+	return getTimeTerminated() >= 0;
+}
 int Task::getTimeBlocked() const
 {
 	return time_blocked;
@@ -149,7 +153,7 @@ int Task::getBlockedSince() const
 	return blocked_since;
 }
 
-Action* Task::getActionPointer()
+Action* Task::getActionPointer() const
 {
 	return action_ptr;
 }

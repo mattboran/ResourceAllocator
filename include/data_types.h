@@ -46,7 +46,7 @@ class Task {
 	int id, time_created, time_blocked, time_terminated, num_resources, delay, blocked_since;
 	bool blocked, aborted;
 	Action* action_ptr;
-	bool sanityCheck(int i);
+	bool sanityCheck(int i) const;
 public:
 	Task(int n_resources, int i);
 	~Task();
@@ -62,17 +62,18 @@ public:
 	void unblock();
 	void abort();
 	void bindActionPointer(Action &action);
-	int getResourceHeld(int i);
-	int getResourceClaim(int i);
-	int getId();
-	int getDelay();
-	int getTimeCreated();
+	int getResourceHeld(int i) const;
+	int getResourceClaim(int i) const;
+	int getId() const;
+	int getDelay() const;
+	int getTimeCreated() const;
 	int getTimeTerminated() const;
-	bool isBlocked();
+	bool isBlocked() const;
 	bool isAborted() const;
+	bool isDoneOrAborted() const;
 	int getTimeBlocked() const;
 	int getBlockedSince() const;
-	Action* getActionPointer();
+	Action* getActionPointer() const;
 
 	void grantResources(int i, int amount);
 	void releaseResources(int i, int amount);

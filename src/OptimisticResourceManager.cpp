@@ -4,11 +4,14 @@
  *  Created on: Mar 10, 2018
  *      Author: matt
  */
+#include <algorithm>
 #include <assert.h>
 #include <iostream>
 #include "data_types.h"
 
 using namespace std;
+
+static bool compareTasksForSort(const Task &a, const Task &b);
 
 OptimisticResourceManager::OptimisticResourceManager(int num_resources, int tasks, int* resources_initial) :
 	ResourceManager(num_resources, tasks, resources_initial) {}
@@ -56,18 +59,24 @@ void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task
 	if (task.getDelay() < action.getDelay())
 	{
 		task.incrementDelay();
-		std::cout << "Task # " << task.getId() + 1 << " is working on its delay.\n";
+		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
+				" of " << action.getDelay() << " cycles).\n";
 	}
 	else
 	{
 		if (getResourcesAvailable(requested_resource_id) < amount_requested)
 		{
-			task.block();
-			task.setBlockedSince(getCycle());
+			if (!task.isBlocked())
+			{
+				task.block();
+				task.setBlockedSince(getCycle());
+			}
 			std::cout << " Task # " << task.getId() + 1<< " could not be granted its resource!\n";
 		}
 		else
 		{
+			task.unblock();
+			task.setDelay(0);
 			task.grantResources(requested_resource_id, amount_requested);
 			decrementResourcesAvailable(requested_resource_id, amount_requested);
 			std::cout << " Task # " << task.getId() + 1 << " was granted " << amount_requested <<
@@ -80,16 +89,18 @@ void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task
 void OptimisticResourceManager::dispatchRelease(const Action &action, Task& task)
 {
 	assert (task.getId() == action.getTaskId());
-
 	int released_resource_id = action.getResourceId();
 	int amount_released = action.getAmount();
 
 	if (task.getDelay() < action.getDelay())
 	{
 		task.incrementDelay();
+		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
+						" of " << action.getDelay() << " cycles).\n";
 	}
 	else
 	{
+		task.unblock();
 		task.setDelay(0);
 		task.releaseResources(released_resource_id, amount_released);
 		incrementResourcesAvailable(released_resource_id, amount_released);
@@ -104,10 +115,12 @@ void OptimisticResourceManager::dispatchRelease(const Action &action, Task& task
 void OptimisticResourceManager::dispatchTerminate(const Action &action, Task& task)
 {
 	assert (task.getId() == action.getTaskId());
-	assert (task.getTimeTerminated() < 0);
+	assert (!task.isDoneOrAborted());
 	if (task.getDelay() < action.getDelay())
 	{
 		task.incrementDelay();
+		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
+						" of " << action.getDelay() << " cycles).\n";
 	}
 	else
 	{
@@ -121,14 +134,16 @@ void OptimisticResourceManager::dispatchTerminate(const Action &action, Task& ta
 bool OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
 {
 	bool ret_val = false;
-	// First check if there's deadlock
+	// Sort the tasklist by ID so we can kill off the 1st process that's deadlocking, then 2nd, etc
+	// Then check if there's deadlock
 	int resource = 0;
+	std::sort(tasklist.begin(), tasklist.end(), compareTasksForSort);
 	if (detectDeadlock(tasklist))
 	{
 		ret_val = true;
 		for (auto it = tasklist.begin(); it != tasklist.end(); it++)
 		{
-			if (!it->isAborted())
+			if (!it->isDoneOrAborted())
 			{
 				it->setTimeTerminated(getCycle());
 				std::cout << "Task # " << it->getId() + 1 << " was aborted due to deadlock.\n";
@@ -145,6 +160,7 @@ bool OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
 				}
 				std::cout << ".\n";
 				it->abort();
+				it->unblock();
 				break;
 			}
 		}
@@ -156,7 +172,7 @@ bool OptimisticResourceManager::detectDeadlock(vector<Task> &tasklist)
 {
 	for (auto it = tasklist.begin(); it != tasklist.end(); it++)
 	{
-		if (!it->isBlocked())
+		if (!it->isBlocked() && !it->isDoneOrAborted())
 		{
 			return false;
 		}
@@ -178,7 +194,7 @@ bool OptimisticResourceManager::canSatisfyAnyRequest( taskvec_t &tasklist)
 
 	for (unsigned int i = 0; i < tasklist.size(); i++)
 	{
-		if (tasklist[i].isAborted())
+		if (tasklist[i].isDoneOrAborted())
 		{
 			continue;
 		}
@@ -193,4 +209,9 @@ bool OptimisticResourceManager::canSatisfyAnyRequest( taskvec_t &tasklist)
 
 	delete new_resources;
 	return ret_val;
+}
+
+static bool compareTasksForSort(const Task &a, const Task &b)
+{
+	return a.getId() < b.getId();
 }
