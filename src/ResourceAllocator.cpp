@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 	taskvec_t task_list;
 	// Multidimensional vector: vector of vectors. Equivalent to Action**
 	// action_contianer[0] contains the actions for task 1, [1] for task 2, etc...
-	ActionContainer_t action_container;
+	ActionContainer_t action_container, banker_action_container;
 
 	input_file >> num_tasks;
 	input_file >> num_resources;
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
 		Action action(type, task_id, delay, resource_id - 1, amount);
 		action_container[task_id].push_back(action);
 	}
-
+	banker_action_container = action_container;
 	input_file.close();
 
 	// Bind action pointers
@@ -100,9 +100,12 @@ int main(int argc, char** argv)
 		cout << "Cycle " << current_cycle << " - " << current_cycle + 1 << "\n";
 
 		// Process each task's action for this cycle. Start with blocked processes
-
 		stable_sort(task_list.begin(), task_list.end(), compareTasksForSort);
 
+		// For each task, if it's already terminated or aborted, go to the next one
+		// Otherwise, dispatch the action and handle the blocked processes (by updating time blocked)
+		// If a task was successfully dispatched and the delay time has elapsed (or was 0),
+		// Clear that action out of the action container and get a new action pointer for that task (next action)
 		for (int i = 0; i < num_tasks; i++)
 		{
 			Task* current_task = &task_list[i];
@@ -123,8 +126,8 @@ int main(int argc, char** argv)
 			}
 		}
 
-
 		// Loop in this cycle while no request can be satisfied
+		// HandleDeadlock terminates a process if it finds deadlock.
 		while (optimistic_manager.handleDeadlock(task_list)
 				&& !areAllTasksFinished(task_list))
 		{
@@ -139,7 +142,7 @@ int main(int argc, char** argv)
 	printTaskStats(task_list);
 
 	// Main loop for Banker
-
+	action_container = banker_action_container;
 	// cleanup
 	delete blocked_processes;
 	delete resources_available;
@@ -167,6 +170,7 @@ static action_t stringToActionType(const string &str){
 	return ret_val;
 }
 
+// See if there's any process that's not either done or aborted
 static bool areAllTasksFinished(const taskvec_t &tasklist)
 {
 	bool ret_val = true;
@@ -180,6 +184,7 @@ static bool areAllTasksFinished(const taskvec_t &tasklist)
 	return ret_val;
 }
 
+// Print output info based on the info in each task (in tasklist)
 static void printTaskStats(const taskvec_t &tasklist)
 {
 	int total_cycles = 0;
@@ -208,6 +213,8 @@ static void printTaskStats(const taskvec_t &tasklist)
 	cout << "Total \t\t" << total_cycles << "\t" << total_blocked_cycles << "\t" << total_blocked_percent << "%\n";
 }
 
+// If a task is blocked, it should come first. These blocked processes should be sorted
+// by the time they were blocked (FIFO). This is used in the OptimisticResourceManager loop
 static bool compareTasksForSort(const Task &a, const Task &b)
 {
 	if (a.isBlocked() && !b.isBlocked() )

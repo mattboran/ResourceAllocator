@@ -37,6 +37,8 @@ void OptimisticResourceManager::dispatchAction(Task& task)
 	}
 }
 
+// Set the int at resource_claimed[id] to the value given by action
+// This claim is ignored by optimistic resource manager
 void OptimisticResourceManager::dispatchInitiate(const Action &action, Task& task)
 {
 	assert (task.getId() == action.getTaskId());
@@ -50,6 +52,9 @@ void OptimisticResourceManager::dispatchInitiate(const Action &action, Task& tas
 					<< action.getAmount() << " of resource " << resource_id + 1 << "\n";
 }
 
+// For a request, if there's a delay, increment the delay counter until delay == action.delay
+// Otherwise, if request cannot be granted, block process. If it's already blocked, increase wait time
+// If request can be granted, grant the resources
 void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task)
 {
 	assert (task.getId() == action.getTaskId());
@@ -86,6 +91,9 @@ void OptimisticResourceManager::dispatchRequest(const Action &action, Task& task
 	}
 }
 
+// For a release, if there's a delay, increment the delay counter until delay == action.delay
+// Otherwise, set the amount to be decreased at the end of the cycle by calling releaseResources
+// This gets committed at the end of the cycle by commit_resources
 void OptimisticResourceManager::dispatchRelease(const Action &action, Task& task)
 {
 	assert (task.getId() == action.getTaskId());
@@ -112,6 +120,9 @@ void OptimisticResourceManager::dispatchRelease(const Action &action, Task& task
 
 }
 
+// First, make sure the action isn't already aborted
+// Then. process delay in the same way the other actions handle delay
+// Then, if delay counter == action.delay, terminate the process by setting the terminated time to now
 void OptimisticResourceManager::dispatchTerminate(const Action &action, Task& task)
 {
 	assert (task.getId() == action.getTaskId());
@@ -131,6 +142,9 @@ void OptimisticResourceManager::dispatchTerminate(const Action &action, Task& ta
 }
 
 // Checks for deadlock, and aborts the lowest process in the case that deadlock is found
+// In the case of deadlock, sort the processes by the order it appeared in the list (task ID)
+// Then, find the first process that's not done or aborted, and abort it by setting time terminated to now
+// Also set the aborted flag so we can print accurate info at the end
 bool OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
 {
 	bool ret_val = false;
@@ -168,6 +182,7 @@ bool OptimisticResourceManager::handleDeadlock(vector<Task> &tasklist)
 	return ret_val;
 }
 
+// If all processes are blocked, return true. Else return false
 bool OptimisticResourceManager::detectDeadlock(vector<Task> &tasklist)
 {
 	for (auto it = tasklist.begin(); it != tasklist.end(); it++)
@@ -180,6 +195,9 @@ bool OptimisticResourceManager::detectDeadlock(vector<Task> &tasklist)
 	return true;
 }
 
+// Cycle through all tasks and do the following. First set new_resources to the number of available resources
+// Take into account any releases or abort releases that happened that cycle but that haven't been committed yet
+// See if any action can be satisfied by this newly available set of resources. If yes, return true. Else return false
 bool OptimisticResourceManager::canSatisfyAnyRequest( taskvec_t &tasklist)
 {
 	bool ret_val = false;
@@ -211,6 +229,7 @@ bool OptimisticResourceManager::canSatisfyAnyRequest( taskvec_t &tasklist)
 	return ret_val;
 }
 
+// Sort task function - sort by order it appears in input file (id)
 static bool compareTasksForSort(const Task &a, const Task &b)
 {
 	return a.getId() < b.getId();

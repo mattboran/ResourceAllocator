@@ -130,10 +130,19 @@ public:
 };
 
 // BankerResourceManager likewise dispatches actions on tasks.
-//class BankerResourceManager : public ResourceManager
-//{
-//
-//};
-
+class BankerResourceManager : public ResourceManager
+{
+	void dispatchInitiate(const Action &action, Task& task);
+	void dispatchRequest(const Action &action, Task& task);
+	void dispatchRelease(const Action &action, Task& task);
+	void dispatchTerminate(const Action &action, Task& task);
+	bool detectDeadlock(taskvec_t &tasklist);
+public:
+	BankerResourceManager(int num_resources, int tasks, int* resources_initial);
+	~BankerResourceManager() = default;
+	void dispatchAction(Task& task);
+	bool handleDeadlock(taskvec_t &tasklist);
+	bool canSatisfyAnyRequest(taskvec_t &tasklist);
+};
 
 #endif /* INCLUDE_DATA_TYPES_H_ */
