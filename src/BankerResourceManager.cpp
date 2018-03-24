@@ -41,7 +41,18 @@ void BankerResourceManager::dispatchInitiate(const Action &action, Task& task)
 	assert (task.getId() == action.getTaskId());
 
 	int resource_id = action.getResourceId();
+	int claim = task.getResourceClaim(resource_id);
+	int available = getResourcesAvailable(resource_id);
 
+	if (claim > available)
+	{
+		task.abort();
+		task.setTimeTerminated(getCycle());
+		std::cout << "Banker aborts task # " << task.getId() + 1 << " before run begins: \n";
+		std::cout << "\tclaim for resource " << resource_id + 1 << " (" << claim << ") exceeds number of units present: "
+				  << available << ".\n";
+		return;
+	}
 	task.setTimeCreated(getCycle());
 	task.setResourceClaimed(action.getResourceId(), action.getAmount());
 	std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
@@ -64,38 +75,98 @@ void BankerResourceManager::dispatchRequest(const Action &action, Task& task)
 	if (task.getResourceClaim(requested_resource_id) < amount_requested + task.getResourceHeld(requested_resource_id))
 	{
 		task.abort();
+		int resource = 0;
+		for (int i = 0; i < getNumResources(); i++)
+		{
+			resource = task.getResourceHeld(i);
+			if (resource > 0)
+			{
+				task.releaseResources(i, resource);
+				incrementResourcesAvailable(i, resource);
+			}
+		}
 		task.setTimeTerminated(getCycle());
 		std::cout << "Task # " << task.getId() + 1 << " request exceeded claim. Aborted!\n";
 		return;
 	}
-//
-//	if (task.getDelay() < action.getDelay())
-//	{
-//		task.incrementDelay();
-//		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
-//				" of " << action.getDelay() << " cycles).\n";
-//	}else
-//	{
-//		if (getResourcesAvailable(requested_resource_id) < amount_requested)
-//		{
-//			if (!task.isBlocked())
-//			{
-//				task.block();
-//				task.setBlockedSince(getCycle());
-//			}
-//			std::cout << " Task # " << task.getId() + 1<< " could not be granted its resource!\n";
-//		}
-//		else
-//		{
-//			task.unblock();
-//			task.setDelay(0);
-//			task.grantResources(requested_resource_id, amount_requested);
-//			decrementResourcesAvailable(requested_resource_id, amount_requested);
-//			std::cout << " Task # " << task.getId() + 1 << " was granted " << amount_requested <<
-//					" of resource " << requested_resource_id + 1 << ". It now holds " <<
-//					task.getResourceHeld(requested_resource_id) << " of that resource.\n";
-//		}
-//	}
+
+	if (task.getDelay() < action.getDelay())
+	{
+		task.incrementDelay();
+		std::cout << "Task # " << task.getId() + 1 << " is delayed (" << task.getDelay() <<
+				" of " << action.getDelay() << " cycles).\n";
+	}else
+	{
+		if (getResourcesAvailable(requested_resource_id) < task.getResourceClaim(requested_resource_id) - task.getResourceHeld(requested_resource_id))
+		{
+			if (!task.isBlocked())
+			{
+				task.block();
+				task.setBlockedSince(getCycle());
+			}
+			std::cout << " Task # " << task.getId() + 1<< " could not be granted its resource!\n";
+		}
+		else
+		{
+			task.unblock();
+			task.setDelay(0);
+			task.grantResources(requested_resource_id, amount_requested);
+			decrementResourcesAvailable(requested_resource_id, amount_requested);
+			std::cout << " Task # " << task.getId() + 1 << " was granted " << amount_requested <<
+					" of resource " << requested_resource_id + 1 << ". It now holds " <<
+					task.getResourceHeld(requested_resource_id) << " of that resource.\n";
+		}
+	}
 
 }
-//
+
+// For a release, if there's a delay, increment the delay counter until delay == action.delay
+// Otherwise, set the amount to be decreased at the end of the cycle by calling releaseResources
+// This gets committed at the end of the cycle by commit_resources
+void BankerResourceManager::dispatchRelease(const Action &action, Task& task)
+{
+	assert (task.getId() == action.getTaskId());
+	int released_resource_id = action.getResourceId();
+	int amount_released = action.getAmount();
+
+	if (task.getDelay() < action.getDelay())
+	{
+		task.incrementDelay();
+		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
+						" of " << action.getDelay() << " cycles).\n";
+	}
+	else
+	{
+		task.unblock();
+		task.setDelay(0);
+		task.releaseResources(released_resource_id, amount_released);
+		incrementResourcesAvailable(released_resource_id, amount_released);
+
+		std::cout << " Task # " << task.getId() + 1 << " is releasing " << amount_released <<
+				" of resource " << released_resource_id + 1 << ". It now holds " <<
+				task.getResourceHeld(released_resource_id) << " of that resource.\n";
+	}
+
+}
+
+// First, make sure the action isn't already aborted
+// Then. process delay in the same way the other actions handle delay
+// Then, if delay counter == action.delay, terminate the process by setting the terminated time to now
+void BankerResourceManager::dispatchTerminate(const Action &action, Task& task)
+{
+	assert (task.getId() == action.getTaskId());
+	assert (!task.isDoneOrAborted());
+	if (task.getDelay() < action.getDelay())
+	{
+		task.incrementDelay();
+		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
+						" of " << action.getDelay() << " cycles).\n";
+	}
+	else
+	{
+		task.setDelay(0);
+		task.setTimeTerminated(getCycle());
+		std::cout << " Task # " << task.getId() + 1 << " is terminated. \n";
+	}
+}
+
