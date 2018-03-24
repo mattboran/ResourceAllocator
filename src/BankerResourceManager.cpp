@@ -68,34 +68,34 @@ void BankerResourceManager::dispatchRequest(const Action &action, Task& task)
 		std::cout << "Task # " << task.getId() + 1 << " request exceeded claim. Aborted!\n";
 		return;
 	}
-
-	if (task.getDelay() < action.getDelay())
-	{
-		task.incrementDelay();
-		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
-				" of " << action.getDelay() << " cycles).\n";
-	}else
-	{
-		if (getResourcesAvailable(requested_resource_id) < amount_requested)
-		{
-			if (!task.isBlocked())
-			{
-				task.block();
-				task.setBlockedSince(getCycle());
-			}
-			std::cout << " Task # " << task.getId() + 1<< " could not be granted its resource!\n";
-		}
-		else
-		{
-			task.unblock();
-			task.setDelay(0);
-			task.grantResources(requested_resource_id, amount_requested);
-			decrementResourcesAvailable(requested_resource_id, amount_requested);
-			std::cout << " Task # " << task.getId() + 1 << " was granted " << amount_requested <<
-					" of resource " << requested_resource_id + 1 << ". It now holds " <<
-					task.getResourceHeld(requested_resource_id) << " of that resource.\n";
-		}
-	}
+//
+//	if (task.getDelay() < action.getDelay())
+//	{
+//		task.incrementDelay();
+//		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
+//				" of " << action.getDelay() << " cycles).\n";
+//	}else
+//	{
+//		if (getResourcesAvailable(requested_resource_id) < amount_requested)
+//		{
+//			if (!task.isBlocked())
+//			{
+//				task.block();
+//				task.setBlockedSince(getCycle());
+//			}
+//			std::cout << " Task # " << task.getId() + 1<< " could not be granted its resource!\n";
+//		}
+//		else
+//		{
+//			task.unblock();
+//			task.setDelay(0);
+//			task.grantResources(requested_resource_id, amount_requested);
+//			decrementResourcesAvailable(requested_resource_id, amount_requested);
+//			std::cout << " Task # " << task.getId() + 1 << " was granted " << amount_requested <<
+//					" of resource " << requested_resource_id + 1 << ". It now holds " <<
+//					task.getResourceHeld(requested_resource_id) << " of that resource.\n";
+//		}
+//	}
 
 }
 //
