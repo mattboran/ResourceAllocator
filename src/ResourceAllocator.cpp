@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 
 	if (argc < 2)
 	{
-		filename = "./data/input-09.txt";
+		filename = "./data/input-13.txt";
 	}
 	else
 	{
@@ -97,8 +97,9 @@ int main(int argc, char** argv)
 	while (!areAllTasksFinished(task_list))
 	{
 		current_cycle = optimistic_manager.getCycle();
+#ifdef DEBUG
 		cout << "Cycle " << current_cycle << " - " << current_cycle + 1 << "\n";
-
+#endif
 		// Process each task's action for this cycle. Start with blocked processes (sort by when it was blocked in queue = FIFO)
 		stable_sort(task_list.begin(), task_list.end(), compareTasksForSort);
 
@@ -156,8 +157,9 @@ int main(int argc, char** argv)
 	while (!areAllTasksFinished(task_list))
 	{
 		current_cycle = banker_manager.getCycle();
+#ifdef DEBUG
 		cout << "Cycle " << current_cycle << " - " << current_cycle + 1 << "\n";
-
+#endif
 		// Process each task's action for this cycle. Start with blocked processes
 		//stable_sort(task_list.begin(), task_list.end(), compareTasksForSort);
 

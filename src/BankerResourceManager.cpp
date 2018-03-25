@@ -35,13 +35,13 @@ void BankerResourceManager::dispatchAction(Task &task)
 	}
 }
 
-// Set the int at resource_claimed[id] to the value given by action
+// Set the int at resource_claimed[id] to the value given by action. If claim exceeds resources available, abort the task.
 void BankerResourceManager::dispatchInitiate(const Action &action, Task& task)
 {
 	assert (task.getId() == action.getTaskId());
 
 	int resource_id = action.getResourceId();
-	int claim = task.getResourceClaim(resource_id);
+	int claim = action.getAmount();
 	int available = getResourcesAvailable(resource_id);
 
 	if (claim > available)
@@ -54,14 +54,17 @@ void BankerResourceManager::dispatchInitiate(const Action &action, Task& task)
 		return;
 	}
 	task.setTimeCreated(getCycle());
-	task.setResourceClaimed(action.getResourceId(), action.getAmount());
+	task.setResourceClaimed(resource_id, claim);
+#ifdef DEBUG
 	std::cout << "At cycle " << getCycle() << " - " << getCycle() + 1 <<
 					" Task # " << task.getId() + 1 << " was initialized with claim "
 					<< action.getAmount() << " of resource " << resource_id + 1 << "\n";
+#endif
 }
 
 // For a request, first check if the request exceeds the claim of the process
 // If there's a delay, increment the delay counter until delay == action.delay
+// Then, check if state is safe by iterating through all resources and checking claim vs available resources
 // Otherwise, if request cannot be granted, block process. If it's already blocked, increase wait time
 // If request can be granted, grant the resources
 void BankerResourceManager::dispatchRequest(const Action &action, Task& task)
@@ -93,18 +96,33 @@ void BankerResourceManager::dispatchRequest(const Action &action, Task& task)
 	if (task.getDelay() < action.getDelay())
 	{
 		task.incrementDelay();
+#ifdef DEBUG
 		std::cout << "Task # " << task.getId() + 1 << " is delayed (" << task.getDelay() <<
 				" of " << action.getDelay() << " cycles).\n";
+#endif
 	}else
 	{
-		if (getResourcesAvailable(requested_resource_id) < task.getResourceClaim(requested_resource_id) - task.getResourceHeld(requested_resource_id))
+		// Check if state is safe
+		bool safe = true;
+		for (int i = 0; i < getNumResources(); i++)
+		{
+
+			if (getResourcesAvailable(i) < task.getResourceClaim(i) - task.getResourceHeld(i))
+			{
+				safe = false;
+				break;
+			}
+		}
+		if (!safe)
 		{
 			if (!task.isBlocked())
 			{
 				task.block();
 				task.setBlockedSince(getCycle());
 			}
+#ifdef DEBUG
 			std::cout << " Task # " << task.getId() + 1<< " could not be granted its resource!\n";
+#endif
 		}
 		else
 		{
@@ -112,9 +130,11 @@ void BankerResourceManager::dispatchRequest(const Action &action, Task& task)
 			task.setDelay(0);
 			task.grantResources(requested_resource_id, amount_requested);
 			decrementResourcesAvailable(requested_resource_id, amount_requested);
+#ifdef DEBUG
 			std::cout << " Task # " << task.getId() + 1 << " was granted " << amount_requested <<
 					" of resource " << requested_resource_id + 1 << ". It now holds " <<
 					task.getResourceHeld(requested_resource_id) << " of that resource.\n";
+#endif
 		}
 	}
 
@@ -132,8 +152,10 @@ void BankerResourceManager::dispatchRelease(const Action &action, Task& task)
 	if (task.getDelay() < action.getDelay())
 	{
 		task.incrementDelay();
+#ifdef DEBUG
 		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
 						" of " << action.getDelay() << " cycles).\n";
+#endif
 	}
 	else
 	{
@@ -141,10 +163,11 @@ void BankerResourceManager::dispatchRelease(const Action &action, Task& task)
 		task.setDelay(0);
 		task.releaseResources(released_resource_id, amount_released);
 		incrementResourcesAvailable(released_resource_id, amount_released);
-
+#ifdef DEBUG
 		std::cout << " Task # " << task.getId() + 1 << " is releasing " << amount_released <<
 				" of resource " << released_resource_id + 1 << ". It now holds " <<
 				task.getResourceHeld(released_resource_id) << " of that resource.\n";
+#endif
 	}
 
 }
@@ -159,14 +182,18 @@ void BankerResourceManager::dispatchTerminate(const Action &action, Task& task)
 	if (task.getDelay() < action.getDelay())
 	{
 		task.incrementDelay();
+#ifdef DEBUG
 		std::cout << "Task # " << task.getId() + 1 << " is computing (" << task.getDelay() <<
 						" of " << action.getDelay() << " cycles).\n";
+#endif
 	}
 	else
 	{
 		task.setDelay(0);
 		task.setTimeTerminated(getCycle());
+#ifdef DEBUG
 		std::cout << " Task # " << task.getId() + 1 << " is terminated. \n";
+#endif
 	}
 }
 

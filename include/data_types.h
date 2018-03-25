@@ -22,7 +22,7 @@ typedef enum action_type
 
 // This class represents one of the actions as listed above.
 // Actions are dispatched by the resource manager, and side effects
-// are applied to Tasks. Actions are immutable.
+// are applied to Tasks. Actions are immutable because I wish C++ was Rust
 class Action
 {
 	action_t type;
@@ -113,7 +113,9 @@ public:
 	virtual void dispatchAction(Task& task) = 0;
 };
 
-// OptimisticResourceManager dispatches actions on tasks.
+// OptimisticResourceManager dispatches actions on tasks according to resource manager. Obeys FIFO rule - first action to become blocked gets checked first
+// to see if a request can be satisfied. Also, there's a handleDeadlock function that takes action if detectDeadlock returns true. Also, canSatisfyAnyRequest is
+// the criteria for deadlock being resolved.
 class OptimisticResourceManager : public ResourceManager
 {
 	void dispatchInitiate(const Action &action, Task& task);
@@ -129,7 +131,8 @@ public:
 	bool canSatisfyAnyRequest(taskvec_t &tasklist);
 };
 
-// BankerResourceManager likewise dispatches actions on tasks.
+// BankerResourceManager likewise dispatches actions on tasks according to Banker's algorithm
+// The interesting work happens in dispatchRequest (that's where we check if state is safe)
 class BankerResourceManager : public ResourceManager
 {
 	void dispatchInitiate(const Action &action, Task& task);
